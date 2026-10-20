@@ -1,0 +1,6 @@
+[workspace]
+members = ["lifetimes"]
+default-members = ["lifetimes"]
+resolver = "3"
+
+# Add each tutorial project as a sibling directory and list it in `members`.
