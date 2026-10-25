@@ -1,3 +1,4 @@
+// https://www.youtube.com/watch?v=rAl-9HwD858
 pub struct StrSplit<'s, D> {
     haystack: Option<&'s str>,
     delimiter: D,
