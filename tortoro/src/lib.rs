@@ -1,4 +1,81 @@
 use anyhow::{Result, anyhow, bail};
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
+use std::fmt;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Torrent {
+    pub announce: String,
+    pub info: Info,
+}
+
+#[derive(Debug, Clone)]
+pub struct Hashes(Vec<[u8; 20]>);
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Info {
+    pub name: String,
+    #[serde(rename = "piece length")]
+    pub piece_length: u64,
+    pub pieces: Hashes,
+
+    #[serde(flatten)]
+    pub keys: Keys,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum Keys {
+    SingleFile { length: usize },
+    MultiFile { files: File },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct File {
+    pub length: u64,
+    pub path: Vec<String>,
+}
+
+struct HashesVisitor;
+
+impl<'de> Visitor<'de> for HashesVisitor {
+    type Value = Hashes;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a byte str of size 20")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> std::prelude::v1::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if v.len() % 20 != 0 {
+            return Err(E::custom(format!(
+                "Invalid peice string. Len is {}",
+                v.len()
+            )));
+        }
+        let chunks = v.as_chunks().0.to_vec();
+        Ok(Hashes(chunks))
+    }
+}
+
+impl<'de> Deserialize<'de> for Hashes {
+    fn deserialize<D>(deserializer: D) -> std::prelude::v1::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(HashesVisitor)
+    }
+}
+
+fn deserialize_piece_byte_string<'de, D>(deserializer: D) -> Result<Hashes, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_str(HashesVisitor)
+}
+
 fn decode_bencoded_value(encoded_value: &str) -> Result<(serde_json::Value, &str)> {
     match encoded_value.as_bytes().first() {
         Some(b'i') => {
