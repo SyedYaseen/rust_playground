@@ -1,5 +1,5 @@
 [workspace]
-members = ["fnclo","lifetimes", "tortoro"]
+members = ["fnclo","lifetimes", "scratch", "tortoro"]
 default-members = ["lifetimes"]
 resolver = "3"
 
